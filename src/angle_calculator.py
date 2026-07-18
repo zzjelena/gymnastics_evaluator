@@ -103,5 +103,11 @@ def get_all_angles(landmarks):
         point(landmarks, 12),
         point(landmarks, 24)
     )
+    
+    angles["torso"] = calculate_angle(
+    point(landmarks, 11),
+    point(landmarks, 23),
+    point(landmarks, 27)
+)
 
     return angles
