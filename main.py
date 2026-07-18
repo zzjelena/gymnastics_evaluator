@@ -1,7 +1,8 @@
 import cv2
 import mediapipe as mp
 
-from src.anglecalculator import get_all_angles
+from src.angle_calculator import get_all_angles
+from src.stability_checker import StabilityChecker
 
 mp_pose = mp.solutions.pose
 mp_draw = mp.solutions.drawing_utils
@@ -12,6 +13,8 @@ pose = mp_pose.Pose(
 )
 
 cap = cv2.VideoCapture(0)
+
+stability = StabilityChecker()
 
 while True:
 
@@ -36,8 +39,11 @@ while True:
 
         angles = get_all_angles(landmarks)
 
+        stable, stable_time = stability.update(angles)
+
         y = 30
 
+        # Ispis svih uglova
         for name, value in angles.items():
 
             cv2.putText(
@@ -51,6 +57,35 @@ while True:
             )
 
             y += 25
+
+        # ----------------------------
+        # STATUS STABILNOSTI
+        # ----------------------------
+
+        status = "MOVING"
+
+        if stable:
+            status = "STABLE"
+
+        cv2.putText(
+            frame,
+            status,
+            (20, y + 20),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (0, 255, 0) if stable else (0, 0, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Stable: {stable_time:.2f}s",
+            (20, y + 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (255, 255, 255),
+            2
+        )
 
     cv2.imshow("Gymnastics Evaluator", frame)
 
