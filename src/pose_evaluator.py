@@ -4,63 +4,98 @@ import os
 
 class PoseEvaluator:
 
-    def __init__(self, tolerance=10):
+    def __init__(self):
 
-        # dozvoljeno odstupanje u stepenima
-        self.tolerance = tolerance
+        pass
 
 
     def load_pose(self, filename):
 
         if not os.path.exists(filename):
-            print("Pose file not found!")
+            print("Pose file not found.")
             return None
 
-        with open(filename, "r") as file:
-            return json.load(file)
+        with open(filename, "r") as f:
+            return json.load(f)
 
+
+    def joint_penalty(self, deviation):
+        """
+        Vraća kaznu na osnovu odstupanja ugla.
+        """
+
+        if deviation <= 5:
+            return 0.0
+
+        elif deviation <= 10:
+            return 0.10
+
+        elif deviation <= 20:
+            return 0.30
+
+        else:
+            return 0.50
+
+
+    def joint_color(self, deviation):
+
+        if deviation <= 5:
+            return "green"
+
+        elif deviation <= 10:
+            return "yellow"
+
+        else:
+            return "red"
 
 
     def evaluate(self, current_angles, reference_angles):
 
-        errors = {}
+        report = {}
 
-        total_error = 0
-        joints = 0
+        total_deduction = 0
 
 
         for joint in reference_angles:
 
-            if joint in current_angles:
-
-                error = abs(
-                    current_angles[joint]
-                    -
-                    reference_angles[joint]
-                )
-
-                errors[joint] = error
-
-                total_error += error
-                joints += 1
+            if joint not in current_angles:
+                continue
 
 
-
-        if joints == 0:
-            return 0, errors
-
-
-
-        average_error = total_error / joints
+            deviation = abs(
+                current_angles[joint]
+                -
+                reference_angles[joint]
+            )
 
 
-        # pretvaranje greške u ocenu
+            deduction = self.joint_penalty(deviation)
 
-        score = 100 - average_error
-
-
-        if score < 0:
-            score = 0
+            color = self.joint_color(deviation)
 
 
-        return score, errors
+            report[joint] = {
+
+                "current": current_angles[joint],
+
+                "reference": reference_angles[joint],
+
+                "deviation": deviation,
+
+                "deduction": deduction,
+
+                "color": color
+
+            }
+
+
+            total_deduction += deduction
+
+
+        execution_score = 10 - total_deduction
+
+        if execution_score < 0:
+            execution_score = 0
+
+
+        return report, total_deduction, execution_score

@@ -13,7 +13,6 @@ from src.pose_evaluator import PoseEvaluator
 mp_pose = mp.solutions.pose
 mp_draw = mp.solutions.drawing_utils
 
-
 pose = mp_pose.Pose(
     min_detection_confidence=0.5,
     min_tracking_confidence=0.5
@@ -28,17 +27,13 @@ stability = StabilityChecker()
 
 evaluator = PoseEvaluator()
 
-
-# učitavanje referentne poze
 reference_pose = evaluator.load_pose(
     "data/poses/test_pose.json"
 )
 
-
 if reference_pose is None:
-    print("Nema referentne poze!")
+    print("Referentna poza nije pronađena!")
     exit()
-
 
 
 # -----------------------------
@@ -47,39 +42,24 @@ if reference_pose is None:
 
 cap = cv2.VideoCapture(0)
 
-
 print("LIVE EVALUATION")
 print("ESC - izlaz")
 
-
-
 while True:
 
-
     success, frame = cap.read()
-
 
     if not success:
         break
 
-
-
-    rgb = cv2.cvtColor(
-        frame,
-        cv2.COLOR_BGR2RGB
-    )
-
+    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     results = pose.process(rgb)
 
-
-
     stable = False
-
-
+    stable_time = 0
 
     if results.pose_landmarks:
-
 
         mp_draw.draw_landmarks(
             frame,
@@ -87,26 +67,17 @@ while True:
             mp_pose.POSE_CONNECTIONS
         )
 
-
         landmarks = results.pose_landmarks.landmark
 
-
-        # računanje trenutnih uglova
-
-        current_angles = get_all_angles(
-            landmarks
-        )
-
-
-        # provera stabilnosti
+        current_angles = get_all_angles(landmarks)
 
         stable, stable_time = stability.update(
             current_angles
         )
 
-
-
-        # prikaz uglova
+        # -----------------------------
+        # Prikaz uglova
+        # -----------------------------
 
         y = 30
 
@@ -115,110 +86,116 @@ while True:
             cv2.putText(
                 frame,
                 f"{name}: {int(value)}",
-                (20,y),
+                (20, y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.55,
-                (0,255,0),
+                (0, 255, 0),
                 2
             )
 
             y += 25
 
-
-
         # -----------------------------
-        # Evaluacija samo kada miruje
+        # Status stabilnosti
         # -----------------------------
 
         if stable:
 
+            cv2.putText(
+                frame,
+                f"STABLE ({stable_time:.1f}s)",
+                (20, 280),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (0, 255, 0),
+                2
+            )
 
-            score, errors = evaluator.evaluate(
+            report, deduction, score = evaluator.evaluate(
                 current_angles,
                 reference_pose
             )
 
-
             cv2.putText(
                 frame,
-                f"SCORE: {int(score)}",
-                (20,400),
+                f"Execution score: {score:.2f}/10",
+                (20, 320),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                1,
-                (0,255,0),
+                0.8,
+                (0, 255, 0),
                 2
             )
 
+            cv2.putText(
+                frame,
+                f"Deduction: {deduction:.2f}",
+                (20, 350),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (255, 255, 255),
+                2
+            )
 
-            # najveća odstupanja
+            y = 390
 
-            y_error = 440
+            for joint, data in report.items():
 
+                if data["color"] == "green":
+                    color = (0, 255, 0)
 
-            for joint, error in errors.items():
-
-
-                if error > 10:
-
-                    color = (0,0,255)
+                elif data["color"] == "yellow":
+                    color = (0, 255, 255)
 
                 else:
+                    color = (0, 0, 255)
 
-                    color = (0,255,0)
-
-
+                text = (
+                    f"{joint}: "
+                    f"{data['deviation']:.1f}°   "
+                    f"-{data['deduction']:.2f}"
+                )
 
                 cv2.putText(
-
                     frame,
-
-                    f"{joint}: {int(error)} deg",
-
-                    (20,y_error),
-
+                    text,
+                    (20, y),
                     cv2.FONT_HERSHEY_SIMPLEX,
-
                     0.55,
-
                     color,
-
                     2
                 )
 
-
-                y_error += 22
-
-
+                y += 24
 
         else:
 
-
             cv2.putText(
                 frame,
-                "MOVING - HOLD POSE",
-                (20,400),
+                "MOVING",
+                (20, 280),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
-                (0,0,255),
+                (0, 0, 255),
                 2
             )
 
-
+            cv2.putText(
+                frame,
+                f"Stable: {stable_time:.1f}s",
+                (20, 320),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.8,
+                (255, 255, 255),
+                2
+            )
 
     cv2.imshow(
         "Gymnastics Evaluation",
         frame
     )
 
-
-
-    key = cv2.waitKey(1)
-
-
-    if key == 27:
+    if cv2.waitKey(1) == 27:
         break
-
-
 
 cap.release()
 cv2.destroyAllWindows()
