@@ -1,10 +1,11 @@
 {
-    "left_knee": 45,
-    "right_knee": 175,
-    "left_hip": 90,
-    "right_hip": 90,
-    "left_shoulder": 85,
-    "right_shoulder": 85,
-    "left_elbow": 170,
-    "right_elbow": 170
+    "left_knee": 125.91844267645423,
+    "right_knee": 27.49255679212874,
+    "left_hip": 113.9014994056033,
+    "right_hip": 44.99583622331205,
+    "left_elbow": 136.90361437017842,
+    "right_elbow": 127.94118868068432,
+    "left_shoulder": 104.12171721637792,
+    "right_shoulder": 93.27173645490568,
+    "torso": 142.62866674405592
 }

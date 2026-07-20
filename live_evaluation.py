@@ -28,7 +28,10 @@ stability = StabilityChecker()
 evaluator = PoseEvaluator()
 
 reference_pose = evaluator.load_pose(
-    "data/poses/test_pose.json"
+    #"data/poses/test_pose.json"
+    #"data/poses/attitude.json"
+    #"data/poses/passe.json"
+    "data/poses/vaga.json"
 )
 
 if reference_pose is None:

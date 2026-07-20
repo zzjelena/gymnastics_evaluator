@@ -27,7 +27,7 @@ pose = mp_pose.Pose(
 # Podešavanja
 # -----------------------------
 
-POSE_NAME = "test_pose"
+POSE_NAME = "vaga"
 
 SAVE_PATH = "data/poses/" + POSE_NAME + ".json"
 
