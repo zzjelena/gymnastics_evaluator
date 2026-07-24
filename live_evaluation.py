@@ -3,12 +3,13 @@ import mediapipe as mp
 
 from src.angle_calculator import get_all_angles
 from src.stability_checker import StabilityChecker
+from src.balance_checker import BalanceChecker
 from src.pose_evaluator import PoseEvaluator
 
 
-# -----------------------------
+# ----------------------------------
 # MediaPipe
-# -----------------------------
+# ----------------------------------
 
 mp_pose = mp.solutions.pose
 mp_draw = mp.solutions.drawing_utils
@@ -19,19 +20,21 @@ pose = mp_pose.Pose(
 )
 
 
-# -----------------------------
-# Evaluator
-# -----------------------------
+# ----------------------------------
+# Evaluatori
+# ----------------------------------
 
 stability = StabilityChecker()
-
+balance = BalanceChecker()
 evaluator = PoseEvaluator()
 
+
+# ----------------------------------
+# Učitavanje referentne poze
+# ----------------------------------
+
 reference_pose = evaluator.load_pose(
-    #"data/poses/test_pose.json"
-    #"data/poses/attitude.json"
-    #"data/poses/passe.json"
-    "data/poses/vaga.json"
+    "data/poses/test_pose.json"
 )
 
 if reference_pose is None:
@@ -39,14 +42,17 @@ if reference_pose is None:
     exit()
 
 
-# -----------------------------
+# ----------------------------------
 # Kamera
-# -----------------------------
+# ----------------------------------
 
 cap = cv2.VideoCapture(0)
 
-print("LIVE EVALUATION")
-print("ESC - izlaz")
+print("===================================")
+print("GYMNASTICS LIVE EVALUATION")
+print("ESC - Exit")
+print("===================================")
+
 
 while True:
 
@@ -62,6 +68,9 @@ while True:
     stable = False
     stable_time = 0
 
+    score = None
+    report = None
+
     if results.pose_landmarks:
 
         mp_draw.draw_landmarks(
@@ -72,14 +81,27 @@ while True:
 
         landmarks = results.pose_landmarks.landmark
 
+        # -----------------------------
+        # Računanje uglova
+        # -----------------------------
+
         current_angles = get_all_angles(landmarks)
 
-        stable, stable_time = stability.update(
-            current_angles
-        )
+        # -----------------------------
+        # Stabilnost uglova
+        # -----------------------------
+
+        stable, stable_time = stability.update(current_angles)
 
         # -----------------------------
-        # Prikaz uglova
+        # Stabilnost ravnoteže
+        # -----------------------------
+
+        balance_ok = balance.update(landmarks)
+        balance_info = balance.debug()
+
+        # -----------------------------
+        # Ispis uglova
         # -----------------------------
 
         y = 30
@@ -99,15 +121,49 @@ while True:
             y += 25
 
         # -----------------------------
-        # Status stabilnosti
+        # Debug balance
         # -----------------------------
 
-        if stable:
+        cv2.putText(
+            frame,
+            f"Hip move: {balance_info['hip']:.3f}",
+            (20, 260),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Shoulder move: {balance_info['shoulder']:.3f}",
+            (20, 285),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            f"Foot move: {balance_info['foot']:.3f}",
+            (20, 310),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.6,
+            (255, 255, 255),
+            2
+        )
+
+        # -----------------------------
+        # Status
+        # -----------------------------
+
+        if stable and balance_ok:
 
             cv2.putText(
                 frame,
-                f"STABLE ({stable_time:.1f}s)",
-                (20, 280),
+                "POSE STABLE",
+                (20, 340),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
                 (0, 255, 0),
@@ -121,25 +177,15 @@ while True:
 
             cv2.putText(
                 frame,
-                f"Execution score: {score:.2f}/10",
-                (20, 320),
+                f"Score: {score:.2f}",
+                (20, 375),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
+                1,
                 (0, 255, 0),
                 2
             )
 
-            cv2.putText(
-                frame,
-                f"Deduction: {deduction:.2f}",
-                (20, 350),
-                cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
-                (255, 255, 255),
-                2
-            )
-
-            y = 390
+            y = 410
 
             for joint, data in report.items():
 
@@ -154,7 +200,7 @@ while True:
 
                 text = (
                     f"{joint}: "
-                    f"{data['deviation']:.1f}°   "
+                    f"{data['deviation']:.1f} deg   "
                     f"-{data['deduction']:.2f}"
                 )
 
@@ -174,8 +220,8 @@ while True:
 
             cv2.putText(
                 frame,
-                "MOVING",
-                (20, 280),
+                "HOLD BALANCE",
+                (20, 340),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.8,
                 (0, 0, 255),
@@ -184,21 +230,36 @@ while True:
 
             cv2.putText(
                 frame,
-                f"Stable: {stable_time:.1f}s",
-                (20, 320),
+                f"Stable time: {stable_time:.2f}s",
+                (20, 375),
                 cv2.FONT_HERSHEY_SIMPLEX,
-                0.8,
+                0.7,
                 (255, 255, 255),
                 2
             )
+
+    else:
+
+        cv2.putText(
+            frame,
+            "No person detected",
+            (20, 40),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (0, 0, 255),
+            2
+        )
 
     cv2.imshow(
         "Gymnastics Evaluation",
         frame
     )
 
-    if cv2.waitKey(1) == 27:
+    key = cv2.waitKey(1)
+
+    if key == 27:
         break
+
 
 cap.release()
 cv2.destroyAllWindows()
