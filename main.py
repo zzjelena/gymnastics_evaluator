@@ -35,7 +35,15 @@ while True:
             mp_pose.POSE_CONNECTIONS
         )
 
-        landmarks = results.pose_landmarks.landmark
+        if results.pose_world_landmarks:
+
+            landmarks = results.pose_world_landmarks.landmark
+
+            mp_draw.draw_landmarks(
+                frame,
+                results.pose_landmarks,
+                mp_pose.POSE_CONNECTIONS
+            )
 
         angles = get_all_angles(landmarks)
 

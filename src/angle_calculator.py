@@ -1,13 +1,12 @@
 import numpy as np
 
 
+VISIBILITY_THRESHOLD = 0.5
+
+
 def calculate_angle(a, b, c):
     """
-    Računa ugao između tri tačke.
-
-    a - prva tačka
-    b - centralna tačka
-    c - treća tačka
+    Računa ugao između tri 3D tačke.
     """
 
     a = np.array(a)
@@ -20,16 +19,14 @@ def calculate_angle(a, b, c):
     denominator = np.linalg.norm(ba) * np.linalg.norm(bc)
 
     if denominator == 0:
-        return 0
+        return None
 
     cosine = np.dot(ba, bc) / denominator
-
-    # zaštita od numeričkih grešaka
     cosine = np.clip(cosine, -1.0, 1.0)
 
-    angle = np.arccos(cosine)
+    angle = np.degrees(np.arccos(cosine))
 
-    return np.degrees(angle)
+    return angle
 
 
 def point(landmarks, index):
@@ -44,70 +41,72 @@ def point(landmarks, index):
     ]
 
 
+def visible(landmarks, *indices):
+    """
+    Proverava da li su svi potrebni landmarki dovoljno vidljivi.
+    """
+
+    for i in indices:
+        if landmarks[i].visibility < VISIBILITY_THRESHOLD:
+            return False
+
+    return True
+
+
+def safe_angle(landmarks, a, b, c):
+
+    if not visible(landmarks, a, b, c):
+        return None
+
+    return calculate_angle(
+        point(landmarks, a),
+        point(landmarks, b),
+        point(landmarks, c)
+    )
+
+
 def get_all_angles(landmarks):
 
     angles = {}
 
-    # leva noga
-    angles["left_knee"] = calculate_angle(
-        point(landmarks, 23),
-        point(landmarks, 25),
-        point(landmarks, 27)
+    angles["left_knee"] = safe_angle(
+        landmarks,
+        23, 25, 27
     )
 
-    # desna noga
-    angles["right_knee"] = calculate_angle(
-        point(landmarks, 24),
-        point(landmarks, 26),
-        point(landmarks, 28)
+    angles["right_knee"] = safe_angle(
+        landmarks,
+        24, 26, 28
     )
 
-    # levi kuk
-    angles["left_hip"] = calculate_angle(
-        point(landmarks, 11),
-        point(landmarks, 23),
-        point(landmarks, 25)
+    angles["left_hip"] = safe_angle(
+        landmarks,
+        11, 23, 25
     )
 
-    # desni kuk
-    angles["right_hip"] = calculate_angle(
-        point(landmarks, 12),
-        point(landmarks, 24),
-        point(landmarks, 26)
+    angles["right_hip"] = safe_angle(
+        landmarks,
+        12, 24, 26
     )
 
-    # levi lakat
-    angles["left_elbow"] = calculate_angle(
-        point(landmarks, 11),
-        point(landmarks, 13),
-        point(landmarks, 15)
+    angles["left_elbow"] = safe_angle(
+        landmarks,
+        11, 13, 15
     )
 
-    # desni lakat
-    angles["right_elbow"] = calculate_angle(
-        point(landmarks, 12),
-        point(landmarks, 14),
-        point(landmarks, 16)
+    angles["right_elbow"] = safe_angle(
+        landmarks,
+        12, 14, 16
     )
 
-    # levo rame
-    angles["left_shoulder"] = calculate_angle(
-        point(landmarks, 13),
-        point(landmarks, 11),
-        point(landmarks, 23)
+    angles["left_shoulder"] = safe_angle(
+        landmarks,
+        13, 11, 23
     )
 
-    # desno rame
-    angles["right_shoulder"] = calculate_angle(
-        point(landmarks, 14),
-        point(landmarks, 12),
-        point(landmarks, 24)
+    angles["right_shoulder"] = safe_angle(
+        landmarks,
+        14, 12, 24
     )
-    
-    angles["torso"] = calculate_angle(
-    point(landmarks, 11),
-    point(landmarks, 23),
-    point(landmarks, 27)
-)
 
     return angles
