@@ -1,71 +1,94 @@
+from collections import deque
 import time
 
 
 class StabilityChecker:
-    def __init__(self, angle_threshold=8.0, required_time=1.0):
+
+    def __init__(
+        self,
+        angle_threshold=8.0,
+        required_time=1.0,
+        history_size=30
+    ):
         """
-        angle_threshold - maksimalna dozvoljena promena ugla (u stepenima)
-        required_time - koliko dugo osoba mora biti mirna
+        angle_threshold - maksimalna dozvoljena promena ugla (stepeni)
+
+        required_time - koliko dugo poza mora biti stabilna
+
+        history_size - koliko frejmova čuvamo
         """
 
         self.angle_threshold = angle_threshold
         self.required_time = required_time
+        self.history_size = history_size
 
-        self.previous_angles = None
+        self.history = deque(maxlen=history_size)
+
         self.stable_since = None
 
     def update(self, current_angles):
-        """
-        current_angles = dictionary svih uglova
 
-        Vraća:
-        stable (bool)
-        stable_time (float)
-        """
+        # izbacujemo None uglove
+        current_angles = {
+            key: value
+            for key, value in current_angles.items()
+            if value is not None
+        }
 
-        # prvi frejm
-        if self.previous_angles is None:
+        if len(current_angles) == 0:
 
-            self.previous_angles = current_angles.copy()
+            self.history.clear()
             self.stable_since = None
 
             return False, 0.0
 
-        # najveća promena ugla između dva frejma
-        max_difference = 0
+        # dodaj novi frejm
+        self.history.append(current_angles.copy())
 
-        for key in current_angles:
-
-            difference = abs(
-                current_angles[key] -
-                self.previous_angles[key]
-            )
-
-            if difference > max_difference:
-                max_difference = difference
-
-        # ažuriramo prethodne uglove
-        self.previous_angles = current_angles.copy()
-
-        # osoba se pomera
-        if max_difference > self.angle_threshold:
+        # dok nemamo dovoljno frejmova
+        if len(self.history) < self.history_size:
 
             self.stable_since = None
-
             return False, 0.0
 
-        # prvi miran frejm
-        if self.stable_since is None:
+        stable = True
 
-            self.stable_since = time.time()
+        joints = self.history[0].keys()
 
-            return False, 0.0
+        for joint in joints:
 
-        # koliko je dugo mirna
-        stable_time = time.time() - self.stable_since
+            values = []
 
-        if stable_time >= self.required_time:
+            for frame in self.history:
 
-            return True, stable_time
+                if joint in frame:
 
-        return False, stable_time
+                    values.append(frame[joint])
+
+            if len(values) < 2:
+                continue
+
+            movement = max(values) - min(values)
+
+            if movement > self.angle_threshold:
+
+                stable = False
+                break
+
+        if stable:
+
+            if self.stable_since is None:
+
+                self.stable_since = time.time()
+
+            stable_time = time.time() - self.stable_since
+
+            if stable_time >= self.required_time:
+
+                return True, stable_time
+
+            return False, stable_time
+
+        self.stable_since = None
+
+        return False, 0.0

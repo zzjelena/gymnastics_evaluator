@@ -54,9 +54,14 @@ while True:
         # Ispis svih uglova
         for name, value in angles.items():
 
+            if value is None:
+                text = f"{name}: ---"
+            else:
+                text = f"{name}: {int(value)}"
+
             cv2.putText(
                 frame,
-                f"{name}: {int(value)}",
+                text,
                 (20, y),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 0.6,
@@ -64,7 +69,7 @@ while True:
                 2
             )
 
-            y += 25
+        y += 25
 
         # ----------------------------
         # STATUS STABILNOSTI
